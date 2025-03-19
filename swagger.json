@@ -1,0 +1,68 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "Python API Test",
+    "description": "Une simple API Python avec des endpoints de base",
+    "version": "1.0.0"
+  },
+  "host": "localhost:5000",
+  "basePath": "/",
+  "schemes": [
+    "http"
+  ],
+  "paths": {
+    "/": {
+      "get": {
+        "summary": "Page d'accueil",
+        "description": "Retourne un message de bienvenue et la liste des endpoints disponibles",
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {
+            "description": "Message de bienvenue avec liste des endpoints",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "message": {
+                  "type": "string",
+                  "example": "Bienvenue sur l'API de test"
+                },
+                "endpoints": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "example": ["/ping", "/api/docs"]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ping": {
+      "get": {
+        "summary": "Endpoint Ping",
+        "description": "Retourne un message 'pong' pour tester que l'API est en ligne",
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {
+            "description": "Message de réponse pong",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "message": {
+                  "type": "string",
+                  "example": "pong"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
