@@ -2,17 +2,16 @@ from flask import Flask, jsonify, request
 from flask_swagger_ui import get_swaggerui_blueprint
 from flask_jwt_extended import JWTManager
 from flask_cors import CORS
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 from prometheus_flask_exporter import PrometheusMetrics
 import logging
 import os
 import json
-from dotenv import load_dotenv
+from config import get_config
 from models import db, User, Task
 from auth import auth_bp
 from tasks import tasks_bp
-
-# Charger les variables d'environnement
-load_dotenv()
 
 # Configuration du logging
 logging.basicConfig(
@@ -27,20 +26,20 @@ logger = logging.getLogger(__name__)
 
 # Création et configuration de l'application Flask
 app = Flask(__name__)
-
-# Configuration de la base de données
-app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URI', 'sqlite:///app.db')
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-
-# Configuration JWT
-app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'dev-secret-key')
-app.config['JWT_ACCESS_TOKEN_EXPIRES'] = 3600  # 1 heure
-app.config['JWT_REFRESH_TOKEN_EXPIRES'] = 2592000  # 30 jours
+app.config.from_object(get_config())
 
 # Initialisation des extensions
 db.init_app(app)
 jwt = JWTManager(app)
 CORS(app)
+
+# Configuration du rate limiter
+limiter = Limiter(
+    get_remote_address,
+    app=app,
+    default_limits=["100 per day", "10 per hour", "1 per second"],
+    strategy="fixed-window"
+)
 
 # Configuration Prometheus metrics
 metrics = PrometheusMetrics(app)
@@ -84,6 +83,7 @@ def swagger_json():
 
 # Endpoint /ping qui répond avec "pong" (pas besoin d'authentification)
 @app.route('/ping', methods=['GET'])
+@limiter.exempt  # Exemption de limite pour cet endpoint
 @endpoint_counter
 def ping():
     """
@@ -98,6 +98,7 @@ def ping():
 
 # Route par défaut
 @app.route('/', methods=['GET'])
+@limiter.exempt  # Exemption de limite pour cet endpoint
 @endpoint_counter
 def home():
     """
@@ -118,12 +119,14 @@ def home():
             "/auth/refresh",
             "/auth/me",
             "/api/tasks",
-            "/metrics"
+            "/metrics",
+            "/health"
         ]
     })
 
 # Route de statut/santé de l'API
 @app.route('/health', methods=['GET'])
+@limiter.exempt  # Exemption de limite pour cet endpoint
 def health():
     """
     Endpoint de vérification de santé de l'API
@@ -169,6 +172,14 @@ def not_found(e):
 def server_error(e):
     logger.error(f"Erreur 500: {str(e)}")
     return jsonify({"error": "Erreur serveur interne"}), 500
+
+@app.errorhandler(429)
+def ratelimit_handler(e):
+    logger.warning(f"Rate limit exceeded: {request.remote_addr} - {request.path}")
+    return jsonify({
+        "error": "Trop de requêtes",
+        "message": "Limite de requêtes dépassée. Veuillez réessayer plus tard."
+    }), 429
 
 # Création des tables de la base de données
 @app.before_first_request
