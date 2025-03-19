@@ -2,7 +2,7 @@
   "swagger": "2.0",
   "info": {
     "title": "Python API Test",
-    "description": "Une simple API Python avec des endpoints de base",
+    "description": "Une API Python avec authentification et gestion de tâches",
     "version": "1.0.0"
   },
   "host": "localhost:5000",
@@ -10,6 +10,14 @@
   "schemes": [
     "http"
   ],
+  "securityDefinitions": {
+    "JWT": {
+      "type": "apiKey",
+      "name": "Authorization",
+      "in": "header",
+      "description": "Format du header: Bearer {token}"
+    }
+  },
   "paths": {
     "/": {
       "get": {
@@ -20,23 +28,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Message de bienvenue avec liste des endpoints",
-            "schema": {
-              "type": "object",
-              "properties": {
-                "message": {
-                  "type": "string",
-                  "example": "Bienvenue sur l'API de test"
-                },
-                "endpoints": {
-                  "type": "array",
-                  "items": {
-                    "type": "string"
-                  },
-                  "example": ["/ping", "/api/docs"]
-                }
-              }
-            }
+            "description": "Message de bienvenue avec liste des endpoints"
           }
         }
       }
@@ -50,16 +42,380 @@
         ],
         "responses": {
           "200": {
-            "description": "Message de réponse pong",
+            "description": "Message de réponse pong"
+          }
+        }
+      }
+    },
+    "/auth/register": {
+      "post": {
+        "summary": "Inscription",
+        "description": "Permet à un nouvel utilisateur de s'inscrire",
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
             "schema": {
               "type": "object",
               "properties": {
-                "message": {
+                "username": {
                   "type": "string",
-                  "example": "pong"
+                  "example": "johndoe"
+                },
+                "email": {
+                  "type": "string",
+                  "example": "john@example.com"
+                },
+                "password": {
+                  "type": "string",
+                  "example": "secure_password"
                 }
               }
             }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Utilisateur créé avec succès"
+          },
+          "400": {
+            "description": "Erreur de validation ou utilisateur déjà existant"
+          },
+          "500": {
+            "description": "Erreur serveur"
+          }
+        }
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "summary": "Connexion",
+        "description": "Authentifie un utilisateur et retourne des tokens JWT",
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "username": {
+                  "type": "string",
+                  "example": "johndoe"
+                },
+                "password": {
+                  "type": "string",
+                  "example": "secure_password"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Connexion réussie"
+          },
+          "401": {
+            "description": "Authentification échouée"
+          }
+        }
+      }
+    },
+    "/auth/me": {
+      "get": {
+        "summary": "Profil utilisateur",
+        "description": "Récupère les informations de l'utilisateur connecté",
+        "produces": [
+          "application/json"
+        ],
+        "security": [
+          {
+            "JWT": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Informations utilisateur récupérées"
+          },
+          "401": {
+            "description": "Non authentifié"
+          },
+          "404": {
+            "description": "Utilisateur non trouvé"
+          }
+        }
+      }
+    },
+    "/auth/refresh": {
+      "post": {
+        "summary": "Rafraîchir le token",
+        "description": "Utilise un refresh token pour générer un nouveau token d'accès",
+        "security": [
+          {
+            "JWT": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Nouveau token généré"
+          },
+          "401": {
+            "description": "Token non valide ou expiré"
+          }
+        }
+      }
+    },
+    "/api/tasks": {
+      "get": {
+        "summary": "Liste des tâches",
+        "description": "Récupère la liste des tâches de l'utilisateur connecté",
+        "produces": [
+          "application/json"
+        ],
+        "security": [
+          {
+            "JWT": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "type": "integer",
+            "description": "Numéro de page",
+            "default": 1
+          },
+          {
+            "name": "per_page",
+            "in": "query",
+            "type": "integer",
+            "description": "Nombre de résultats par page",
+            "default": 10
+          },
+          {
+            "name": "completed",
+            "in": "query",
+            "type": "boolean",
+            "description": "Filtrer par état de complétion"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Liste des tâches récupérées"
+          },
+          "401": {
+            "description": "Non authentifié"
+          }
+        }
+      },
+      "post": {
+        "summary": "Créer une tâche",
+        "description": "Crée une nouvelle tâche pour l'utilisateur connecté",
+        "produces": [
+          "application/json"
+        ],
+        "security": [
+          {
+            "JWT": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "title": {
+                  "type": "string",
+                  "example": "Acheter du lait"
+                },
+                "description": {
+                  "type": "string",
+                  "example": "Acheter du lait écrémé au supermarché"
+                },
+                "completed": {
+                  "type": "boolean",
+                  "example": false
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Tâche créée avec succès"
+          },
+          "400": {
+            "description": "Erreur de validation"
+          },
+          "401": {
+            "description": "Non authentifié"
+          }
+        }
+      }
+    },
+    "/api/tasks/{task_id}": {
+      "get": {
+        "summary": "Détails d'une tâche",
+        "description": "Récupère les détails d'une tâche spécifique",
+        "produces": [
+          "application/json"
+        ],
+        "security": [
+          {
+            "JWT": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "type": "integer",
+            "description": "ID de la tâche"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Détails de la tâche récupérés"
+          },
+          "401": {
+            "description": "Non authentifié"
+          },
+          "404": {
+            "description": "Tâche non trouvée"
+          }
+        }
+      },
+      "put": {
+        "summary": "Mettre à jour une tâche",
+        "description": "Met à jour une tâche existante",
+        "produces": [
+          "application/json"
+        ],
+        "security": [
+          {
+            "JWT": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "type": "integer",
+            "description": "ID de la tâche"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "title": {
+                  "type": "string",
+                  "example": "Acheter du lait"
+                },
+                "description": {
+                  "type": "string",
+                  "example": "Acheter du lait entier au supermarché"
+                },
+                "completed": {
+                  "type": "boolean",
+                  "example": true
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tâche mise à jour avec succès"
+          },
+          "400": {
+            "description": "Erreur de validation"
+          },
+          "401": {
+            "description": "Non authentifié"
+          },
+          "404": {
+            "description": "Tâche non trouvée"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Supprimer une tâche",
+        "description": "Supprime une tâche existante",
+        "produces": [
+          "application/json"
+        ],
+        "security": [
+          {
+            "JWT": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "type": "integer",
+            "description": "ID de la tâche"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tâche supprimée avec succès"
+          },
+          "401": {
+            "description": "Non authentifié"
+          },
+          "404": {
+            "description": "Tâche non trouvée"
+          }
+        }
+      }
+    },
+    "/api/tasks/{task_id}/toggle": {
+      "patch": {
+        "summary": "Basculer l'état d'une tâche",
+        "description": "Bascule l'état d'une tâche entre terminée et non terminée",
+        "produces": [
+          "application/json"
+        ],
+        "security": [
+          {
+            "JWT": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "type": "integer",
+            "description": "ID de la tâche"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "État de la tâche basculé avec succès"
+          },
+          "401": {
+            "description": "Non authentifié"
+          },
+          "404": {
+            "description": "Tâche non trouvée"
           }
         }
       }
