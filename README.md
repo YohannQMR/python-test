@@ -1,6 +1,6 @@
 # Python API Test
 
-Une API REST Python complète utilisant Flask avec authentification JWT et gestion de tâches.
+Une API REST Python complète utilisant Flask avec authentification JWT, gestion de tâches et configuration prête pour la production.
 
 ## Fonctionnalités
 
@@ -18,8 +18,16 @@ Une API REST Python complète utilisant Flask avec authentification JWT et gesti
 - Intégration continue via GitHub Actions
 - Validation de données avec Marshmallow
 - Journalisation (logging)
+- Système de limitation de débit (Rate Limiting)
+- Monitoring avec Prometheus et Grafana
+- Tests de charge avec Locust
+- Conteneurisation avec Docker et Docker Compose
+- Système de configuration centralisé pour différents environnements
+- Base de données relationnelle (SQLite en développement, PostgreSQL en production)
 
 ## Installation
+
+### Méthode standard
 
 1. Clonez ce dépôt
    ```
@@ -44,26 +52,36 @@ Une API REST Python complète utilisant Flask avec authentification JWT et gesti
    # Modifiez les valeurs dans .env selon vos besoins
    ```
 
-## Utilisation
-
-1. Lancez l'application
+5. Lancez l'application
    ```
    python app.py
    ```
 
-2. L'API démarre sur `http://localhost:5000`
+### Avec Docker
 
-3. Explorez la documentation API
+1. Clonez ce dépôt
    ```
-   http://localhost:5000/api/docs
+   git clone https://github.com/YohannQMR/python-test.git
+   cd python-test
    ```
+
+2. Démarrez les conteneurs avec Docker Compose
+   ```
+   docker-compose up -d
+   ```
+
+3. L'API est accessible à `http://localhost:5000`
+4. Prometheus à `http://localhost:9090`
+5. Grafana à `http://localhost:3000` (admin/admin par défaut)
 
 ## Endpoints disponibles
 
 ### Base
 - `GET /` : Page d'accueil
 - `GET /ping` : Répond avec un message "pong"
+- `GET /health` : Vérifie l'état de santé de l'API
 - `GET /api/docs` : Documentation Swagger UI
+- `GET /metrics` : Métriques Prometheus (pour le monitoring)
 
 ### Authentification
 - `POST /auth/register` : Inscription d'un nouvel utilisateur
@@ -81,11 +99,28 @@ Une API REST Python complète utilisant Flask avec authentification JWT et gesti
 
 ## Tests
 
+### Tests unitaires
+
 Exécuter les tests avec pytest :
 ```
 pytest
 ```
 
+### Tests de charge
+
+Voir [LOAD_TESTING.md](LOAD_TESTING.md) pour les instructions détaillées sur l'utilisation de Locust pour les tests de charge.
+
+## Monitoring
+
+L'application est configurée avec Prometheus pour collecter des métriques et Grafana pour les visualiser.
+
+1. Accédez à Prometheus : `http://localhost:9090`
+2. Accédez à Grafana : `http://localhost:3000` (admin/admin)
+
 ## Roadmap
 
 Consultez [ROADMAP.md](ROADMAP.md) pour les fonctionnalités prévues.
+
+## Contribution
+
+Les contributions sont les bienvenues ! N'hésitez pas à ouvrir une issue ou une pull request.
