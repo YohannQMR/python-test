@@ -2,6 +2,7 @@ from flask import Flask, jsonify, request
 from flask_swagger_ui import get_swaggerui_blueprint
 from flask_jwt_extended import JWTManager
 from flask_cors import CORS
+from prometheus_flask_exporter import PrometheusMetrics
 import logging
 import os
 import json
@@ -41,6 +42,24 @@ db.init_app(app)
 jwt = JWTManager(app)
 CORS(app)
 
+# Configuration Prometheus metrics
+metrics = PrometheusMetrics(app)
+metrics.info('api_info', 'API Info', version='1.0.0')
+
+# Métriques par défaut
+metrics.register_default(
+    metrics.counter(
+        'by_path_counter', 'Request count by request paths',
+        labels={'path': lambda: request.path}
+    )
+)
+
+# Métriques personnalisées
+endpoint_counter = metrics.counter(
+    'endpoint_counter', 'Endpoint request counter',
+    labels={'endpoint': lambda: request.endpoint}
+)
+
 # Configuration Swagger
 SWAGGER_URL = '/api/docs'
 API_URL = '/api/swagger.json'
@@ -65,6 +84,7 @@ def swagger_json():
 
 # Endpoint /ping qui répond avec "pong" (pas besoin d'authentification)
 @app.route('/ping', methods=['GET'])
+@endpoint_counter
 def ping():
     """
     Endpoint simple qui répond 'pong'
@@ -78,6 +98,7 @@ def ping():
 
 # Route par défaut
 @app.route('/', methods=['GET'])
+@endpoint_counter
 def home():
     """
     Page d'accueil de l'API
@@ -96,9 +117,47 @@ def home():
             "/auth/login",
             "/auth/refresh",
             "/auth/me",
-            "/api/tasks"
+            "/api/tasks",
+            "/metrics"
         ]
     })
+
+# Route de statut/santé de l'API
+@app.route('/health', methods=['GET'])
+def health():
+    """
+    Endpoint de vérification de santé de l'API
+    ---
+    responses:
+      200:
+        description: API en fonctionnement normal
+      500:
+        description: Problème avec l'API
+    """
+    try:
+        # Vérifier la connexion à la base de données
+        db_ok = False
+        with app.app_context():
+            db.session.execute("SELECT 1").scalar()
+            db_ok = True
+
+        status = {
+            "status": "ok",
+            "database": "connected" if db_ok else "disconnected",
+            "api_version": "1.0.0"
+        }
+        
+        if not db_ok:
+            return jsonify(status), 500
+            
+        return jsonify(status)
+    except Exception as e:
+        logger.error(f"Health check failed: {str(e)}")
+        return jsonify({
+            "status": "error",
+            "message": "Health check failed",
+            "detail": str(e)
+        }), 500
 
 # Gestion des erreurs
 @app.errorhandler(404)
